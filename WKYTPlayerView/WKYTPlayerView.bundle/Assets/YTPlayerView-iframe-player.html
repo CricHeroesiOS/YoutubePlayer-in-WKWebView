@@ -16,6 +16,7 @@
 <!DOCTYPE html>
 <html>
 <head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <style>
     body { margin: 0; width:100%%; height:100%%;  background-color:#000000; }
     html { width:100%%; height:100%%; background-color:#000000; }
@@ -29,16 +30,47 @@
         width: 100%% !important;
         height: 100%% !important;
     }
+    .ghost-button {
+        align-items: center;
+        display: inline-block;
+        padding: 25px 40px;
+        margin:  320px 70px;
+        text-align: center;
+    }
     </style>
 </head>
 <body>
     <div class="embed-container">
         <div id="player"></div>
     </div>
+    <div>
+        <button id="pipButton" class="ghost-button" onclick="clickPictureInPicture()"> </button>
+    </div>
     <script src="https://www.youtube.com/iframe_api" onerror="window.location.href='ytplayer://onYouTubeIframeAPIFailedToLoad'"></script>
-    <script>
+    <script type="text/javascript">
+        
     var player;
+    var pipButton = document.getElementById('pipButton');
+    var isRunningPictrueInPictrue = false;
+    var timerId = 0;
     var error = false;
+    
+    // Ad clear. call 'clear();'
+    const clear = (() => {
+        const defined = v => v !== null && v !== undefined;
+        const timeout = setInterval(() => {
+            const ad = [...document.querySelectorAll('.ad-showing')][0];
+            if (defined(ad)) {
+                const video = document.querySelector('video');
+                if (defined(video)) {
+                    video.currentTime = video.duration;
+                }
+            }
+        }, 500);
+        return function() {
+            clearTimeout(timeout);
+        }
+    })();
 
     YT.ready(function() {
         player = new YT.Player('player', %@);
@@ -54,6 +86,8 @@
              }
         }
         
+        clear();
+        
         window.setInterval(getCurrentTime, 500);
              
     });
@@ -63,7 +97,7 @@
     }
 
     function onStateChange(event) {
-        if (!error) {            
+        if (!error) {
             window.location.href = 'ytplayer://onStateChange?data=' + event.data;
         }
         else {
@@ -85,6 +119,39 @@
     window.onresize = function() {
         player.setSize(window.innerWidth, window.innerHeight);
     }
+    
+    function prepareForPIP() {
+        pipButton.addEventListener("click", function(event) {
+            clickPictureInPicture();
+        });
+    }
+    
+    function clickPictureInPicture() {
+        const video = document.getElementById('player').contentDocument.querySelector('video');
+        const mode = video.webkitPresentationMode;
+        if (mode != "picture-in-picture") {
+            timerId = setInterval(function () {
+                pictureInPictureState();
+            }, 1000);
+        }
+        video.webkitSetPresentationMode(mode === "picture-in-picture" ? "inline" : "picture-in-picture");
+    }
+    
+    function pictureInPictureState() {
+        const video = document.getElementById('player').contentDocument.querySelector('video');
+        const mode = video.webkitPresentationMode;
+        const nMode = mode === "picture-in-picture" ? true : false;
+        if (mode === "inline" && isRunningPictrueInPictrue === true) {
+            isRunningPictrueInPictrue = false;
+            clearInterval(timerId);
+            window.location.href = 'ytplayer://onPictureInPicrueState?data=inline';
+        } else if (nMode != isRunningPictrueInPictrue) {
+            isRunningPictrueInPictrue = nMode;
+            window.location.href = 'ytplayer://onPictureInPicrueState?data=' + mode;
+        }
+        // return mode
+    }
+    
     </script>
 </body>
 </html>

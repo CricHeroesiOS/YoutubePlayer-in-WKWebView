@@ -52,6 +52,17 @@ typedef NS_ENUM(NSInteger, WKYTPlayerError) {
     kWKYTPlayerErrorUnknown
 };
 
+/** Completion handlers for player API calls. */
+typedef void (^WKYTIntCompletionHandler)(int result, NSError *_Nullable error);
+typedef void (^WKYTFloatCompletionHandler)(float result, NSError *_Nullable error);
+typedef void (^WKYTDoubleCompletionHandler)(double result, NSError *_Nullable error);
+typedef void (^WKYTStringCompletionHandler)(NSString *_Nullable result, NSError *_Nullable error);
+typedef void (^WKYTArrayCompletionHandler)(NSArray *_Nullable result, NSError *_Nullable error);
+typedef void (^WKYTURLCompletionHandler)(NSURL *_Nullable result, NSError *_Nullable error);
+typedef void (^WKYTPlayerStateCompletionHandler)(WKYTPlayerState result, NSError *_Nullable error);
+typedef void (^WKYTPlaybackQualityCompletionHandler)(WKYTPlaybackQuality result,
+                                                   NSError *_Nullable error);
+
 /**
  * A delegate for ViewControllers to respond to YouTube player events outside
  * of the view, such as changes to video playback state or playback errors.
@@ -136,6 +147,13 @@ typedef NS_ENUM(NSInteger, WKYTPlayerError) {
  * @param playerView The WKYTPlayerView instance where the error has occurred.
  */
 - (void)playerViewIframeAPIDidFailedToLoad:(nonnull WKYTPlayerView *)playerView;
+
+/**
+ * Picture in picture state delegate.
+ * enable: picture-in-picture
+ * disable: inline or etc, ...
+ */
+- (void)playerView:(nonnull WKYTPlayerView *)playerView didChangeToStatePictureInPicture:(NSString * _Nullable)state;
 
 @end
 
@@ -730,5 +748,28 @@ typedef NS_ENUM(NSInteger, WKYTPlayerError) {
  * Intended to use for testing, should not be used in production code.
  */
 - (void)removeWebView;
+
+#pragma mark - Safe Area
+
+- (void)mutableSafeArea: (UIEdgeInsets)inset;
+
+#pragma mark - Captions
+
+- (void)captionTracks:(_Nullable WKYTArrayCompletionHandler)completionHandler;
+- (void)captionSelcted:(nullable void (^)(NSDictionary * _Nullable result, NSError * _Nullable error))completionHandler;
+- (void)captions:(BOOL)isTurnOn language:(NSString * _Nonnull)language completion:(nullable void (^)(id _Nullable result, NSError * _Nullable error))completionHandler;
+- (void)captionSize:(NSInteger)size completion:(_Nullable WKYTStringCompletionHandler)completionHandler;
+
+
+#pragma mark - Ad
+
+- (void)clearAdvertise;
+
+#pragma mark - Picture in Picture
+
+- (void)requestPictureInPictureState:(_Nullable WKYTStringCompletionHandler)completionHandler;
+- (void)pictureInPicture;
+- (void)requestPictureInPicture;
+- (void)releasePictureInPicture;
 
 @end

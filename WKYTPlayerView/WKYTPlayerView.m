@@ -1057,10 +1057,22 @@ NSString static *const kWKYTPlayerSyndicationRegexPattern = @"^https://tpc.googl
  * @param jsToExecute The JavaScript code in string format that we want to execute.
  */
 - (void)stringFromEvaluatingJavaScript:(NSString *)jsToExecute completionHandler:(void (^ __nullable)(id __nullable response, NSError * __nullable error))completionHandler{
-    [self.webView evaluateJavaScript:jsToExecute completionHandler:^(id _Nullable response, NSError * _Nullable error) {
-        if (completionHandler) {
-            completionHandler(response, error);
+    [_webView evaluateJavaScript:jsToExecute
+               completionHandler:^(id _Nullable result, NSError *_Nullable error) {
+        if (!completionHandler) {
+            return;
         }
+        if (error) {
+            completionHandler(nil, error);
+            return;
+        }
+        if (!result || [result isKindOfClass:[NSNull class]]) {
+            // we can consider this an empty result
+            completionHandler(nil, nil);
+            return;
+        }
+        
+        completionHandler(result, nil);
     }];
 }
 
@@ -1138,6 +1150,117 @@ NSString static *const kWKYTPlayerSyndicationRegexPattern = @"^https://tpc.googl
         #endif
     });
     return frameworkBundle;
+}
+
+#pragma mark - Ad
+
+- (void)clearAdvertise {
+    [self stringFromEvaluatingJavaScript:[NSString stringWithFormat:@"clear();"] completionHandler:nil];
+}
+
+#pragma mark - Picture in Picture
+
+/// picture-in-picture: true, other: false
+- (void)requestPictureInPictureState:(_Nullable WKYTStringCompletionHandler)completionHandler {
+    [self stringFromEvaluatingJavaScript:@"player.querySelector('video').webkitPresentationMode;"
+                  //isSubFrame: YES
+           completionHandler:^(id  _Nullable result, NSError * _Nullable error) {
+        if (!completionHandler) {
+            return;
+        }
+        if (error) {
+            completionHandler(nil, error);
+            return;
+        }
+        if (!result || ![result isKindOfClass:[NSString class]]) {
+            completionHandler(nil, nil);
+            return;
+        }
+        completionHandler(result, nil);
+    }];
+}
+
+- (void)pictureInPicture {
+    [self stringFromEvaluatingJavaScript:@"pipButton.click();"
+                  //isSubFrame: YES
+           completionHandler:^(id  _Nullable result, NSError * _Nullable error) {
+        // Error Domain=WKErrorDomain Code=4 "A JavaScript exception occurred" UserInfo={WKJavaScriptExceptionLineNumber=0, WKJavaScriptExceptionMessage=TypeError: undefined is not a function, WKJavaScriptExceptionColumnNumber=0, NSLocalizedDescription=A JavaScript exception occurred}
+        /*
+         {
+         NSLocalizedDescription = "A JavaScript exception occurred";
+         WKJavaScriptExceptionColumnNumber = 32;
+         WKJavaScriptExceptionLineNumber = 1;
+         WKJavaScriptExceptionMessage = "TypeError: null is not an object (evaluating 'document.querySelector('video').webkitSetPresentationMode')";
+         WKJavaScriptExceptionSourceURL = "http://co.vlending.mubeat.dev/";
+         }
+         */
+        /*
+         if (!completionHandler) {
+         return;
+         }
+         if (error) {
+         completionHandler(nil, error);
+         return;
+         }
+         if (!result || ![result isKindOfClass:[NSString class]]) {
+         completionHandler(nil, nil);
+         return;
+         }
+         completionHandler(result, nil);
+         */
+    }];
+}
+
+- (void)requestPictureInPicture {
+    [self stringFromEvaluatingJavaScript:@"player.querySelector('video').webkitSetPresentationMode('picture-in-picture');"
+                  //isSubFrame: YES
+           completionHandler:^(id  _Nullable result, NSError * _Nullable error) {
+        // Error Domain=WKErrorDomain Code=4 "A JavaScript exception occurred" UserInfo={WKJavaScriptExceptionLineNumber=0, WKJavaScriptExceptionMessage=TypeError: undefined is not a function, WKJavaScriptExceptionColumnNumber=0, NSLocalizedDescription=A JavaScript exception occurred}
+        /*
+         {
+         NSLocalizedDescription = "A JavaScript exception occurred";
+         WKJavaScriptExceptionColumnNumber = 32;
+         WKJavaScriptExceptionLineNumber = 1;
+         WKJavaScriptExceptionMessage = "TypeError: null is not an object (evaluating 'document.querySelector('video').webkitSetPresentationMode')";
+         WKJavaScriptExceptionSourceURL = "http://co.vlending.mubeat.dev/";
+         }
+         */
+        /*
+         if (!completionHandler) {
+         return;
+         }
+         if (error) {
+         completionHandler(nil, error);
+         return;
+         }
+         if (!result || ![result isKindOfClass:[NSString class]]) {
+         completionHandler(nil, nil);
+         return;
+         }
+         completionHandler(result, nil);
+         */
+    }];
+}
+
+- (void)releasePictureInPicture {
+    [self stringFromEvaluatingJavaScript:@"player.querySelector('video').webkitSetPresentationMode('inline');"
+                  //isSubFrame: YES
+           completionHandler:^(id  _Nullable result, NSError * _Nullable error) {
+        /*
+         if (!completionHandler) {
+         return;
+         }
+         if (error) {
+         completionHandler(nil, error);
+         return;
+         }
+         if (!result || ![result isKindOfClass:[NSString class]]) {
+         completionHandler(nil, nil);
+         return;
+         }
+         completionHandler(result, nil);
+         */
+    }];
 }
 
 @end
