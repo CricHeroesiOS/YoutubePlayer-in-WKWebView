@@ -26,14 +26,14 @@
   // For a full list of player parameters, see the documentation for the HTML5 player
   // at: https://developers.google.com/youtube/player_parameters?playerVersion=HTML5
   NSDictionary *playerVars = @{
-      @"controls" : @0,
+      @"controls" : @1,
       @"playsinline" : @1,
       @"autohide" : @1,
       @"showinfo" : @0,
       @"modestbranding" : @1
   };
   self.playerView.delegate = self;
-  [self.playerView loadWithVideoId:videoId playerVars:playerVars templatePath:templatePath];
+  [self.playerView loadWithVideoId:videoId playerVars:playerVars];
 
     
     
@@ -71,6 +71,8 @@
 
 - (IBAction)buttonPressed:(id)sender {
     __weak typeof(self) wself = self;
+//    [_playerView pictureInPicture];
+//    return;
     if (sender == self.playButton) {
         [[NSNotificationCenter defaultCenter] postNotificationName:@"Playback started" object:self];
         [self.playerView playVideo];

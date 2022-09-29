@@ -65,8 +65,9 @@ NSString static *const kWKYTPlayerSyndicationRegexPattern = @"^https://tpc.googl
 
 @interface WKYTPlayerView()
 
-@property (nonatomic, strong) NSURL *originURL;
+@property (nonatomic) NSURL *originURL;
 @property (nonatomic, weak) UIView *initialLoadingView;
+@property (nonatomic, weak) WKFrameInfo *visibleFrame;
 
 @end
 
@@ -702,7 +703,18 @@ NSString static *const kWKYTPlayerSyndicationRegexPattern = @"^https://tpc.googl
 }
 
 #pragma mark - Private methods
-
+/* Blocked a frame with origin "http://co.vlending.mubeat.dev" from accessing a frame with origin "https://www.youtube.com".  The frame requesting access has a protocol of "http", the frame being accessed has a protocol of "https". Protocols must match. */
+- (NSURL *)originURL {
+    if (!_originURL) {
+        /*
+        NSString *bundleId = [[NSBundle mainBundle] bundleIdentifier];
+        NSString *stringURL = [[NSString stringWithFormat:@"http://%@", bundleId] lowercaseString];
+        _originURL = [NSURL URLWithString:stringURL];
+         */
+        _originURL = [NSURL URLWithString:@"https://www.youtube.com"];
+    }
+    return _originURL;
+}
 /**
  * Private method to handle "navigation" to a callback URL of the format
  * ytplayer://action?data=someData
@@ -868,12 +880,12 @@ NSString static *const kWKYTPlayerSyndicationRegexPattern = @"^https://tpc.googl
  */
 - (BOOL)loadWithPlayerParams:(NSDictionary *)additionalPlayerParams {
     NSDictionary *playerCallbacks = @{
-                                      @"onReady" : @"onReady",
-                                      @"onStateChange" : @"onStateChange",
-                                      @"onPlaybackQualityChange" : @"onPlaybackQualityChange",
-                                      @"onError" : @"onPlayerError",
-                                      @"onPictureInPicrueState" : @"onPictureInPictureChange"
-                                      };
+        @"onReady" : @"onReady",
+        @"onStateChange" : @"onStateChange",
+        @"onPlaybackQualityChange" : @"onPlaybackQualityChange",
+        @"onError" : @"onPlayerError",
+        @"onPictureInPicrueState" : @"onPictureInPictureChange"
+    };
     NSMutableDictionary *playerParams = [[NSMutableDictionary alloc] init];
     if (additionalPlayerParams) {
         [playerParams addEntriesFromDictionary:additionalPlayerParams];
@@ -887,66 +899,25 @@ NSString static *const kWKYTPlayerSyndicationRegexPattern = @"^https://tpc.googl
     
     [playerParams setValue:playerCallbacks forKey:@"events"];
     
-    if ([playerParams objectForKey:@"playerVars"]) {
-        NSMutableDictionary *playerVars = [[NSMutableDictionary alloc] init];
-        [playerVars addEntriesFromDictionary:[playerParams objectForKey:@"playerVars"]];
-        
-        if (![playerVars objectForKey:@"origin"]) {
-            self.originURL = [NSURL URLWithString:@"about:blank"];
-        } else {
-            self.originURL = [NSURL URLWithString: [playerVars objectForKey:@"origin"]];
-        }
-    } else {
-        // This must not be empty so we can render a '{}' in the output JSON
-        [playerParams setValue:[[NSDictionary alloc] init] forKey:@"playerVars"];
+    NSMutableDictionary *playerVars = [[playerParams objectForKey:@"playerVars"] mutableCopy];
+    if (!playerVars) {
+        // playerVars must not be empty so we can render a '{}' in the output JSON
+        playerVars = [NSMutableDictionary dictionary];
     }
+    // We always want to ovewrite the origin to self.originURL, not just for
+    // the webView.baseURL
+    [playerVars setObject:self.originURL.absoluteString forKey:@"origin"];
+    [playerParams setValue:playerVars forKey:@"playerVars"];
     
-    // Remove the existing webView to reset any state
+    // Remove the existing webview to reset any state
     [self.webView removeFromSuperview];
-    _webView = [self createNewWebViewWithPlayerParams:playerParams];
+    _webView = [self createNewWebView];
     [self addSubview:self.webView];
     
-    self.webView.translatesAutoresizingMaskIntoConstraints = NO;
-    NSLayoutConstraint *topConstraint = [NSLayoutConstraint constraintWithItem:self.webView
-                                                                 attribute:NSLayoutAttributeTop
-                                                                 relatedBy:NSLayoutRelationEqual
-                                                                    toItem:self
-                                                                 attribute:NSLayoutAttributeTop
-                                                                multiplier:1.0
-                                                                  constant:0.0];
-    NSLayoutConstraint *leftConstraint = [NSLayoutConstraint constraintWithItem:self.webView
-                                                                 attribute:NSLayoutAttributeLeft
-                                                                 relatedBy:NSLayoutRelationEqual
-                                                                    toItem:self
-                                                                 attribute:NSLayoutAttributeLeft
-                                                                multiplier:1.0
-                                                                  constant:0.0];
-    NSLayoutConstraint *rightConstraint = [NSLayoutConstraint constraintWithItem:self.webView
-                                                                 attribute:NSLayoutAttributeRight
-                                                                 relatedBy:NSLayoutRelationEqual
-                                                                    toItem:self
-                                                                 attribute:NSLayoutAttributeRight
-                                                                multiplier:1.0
-                                                                  constant:0.0];
-    NSLayoutConstraint *bottomConstraint = [NSLayoutConstraint constraintWithItem:self.webView
-                                                                 attribute:NSLayoutAttributeBottom
-                                                                 relatedBy:NSLayoutRelationEqual
-                                                                    toItem:self
-                                                                 attribute:NSLayoutAttributeBottom
-                                                                multiplier:1.0
-                                                                  constant:0.0];
-    NSArray *constraints = @[topConstraint, leftConstraint, rightConstraint, bottomConstraint];
-    [self addConstraints:constraints];
-    
     NSError *error = nil;
-    NSString *path = [additionalPlayerParams objectForKey:@"templatePath"];
-    
-    //in case path to the HTML template wan't provided from the outside
-    if (!path) {
-        path = [[NSBundle bundleForClass:[WKYTPlayerView class]] pathForResource:@"YTPlayerView-iframe-player"
-                                                                          ofType:@"html"
-                                                                     inDirectory:@"Assets"];
-    }
+    NSString *path = [[NSBundle bundleForClass:[WKYTPlayerView class]] pathForResource:@"YTPlayerView-iframe-player"
+                                                                              ofType:@"html"
+                                                                         inDirectory:@"Assets"];
     
     // in case of using Swift and embedded frameworks, resources included not in main bundle,
     // but in framework bundle
@@ -980,9 +951,9 @@ NSString static *const kWKYTPlayerSyndicationRegexPattern = @"^https://tpc.googl
     [[NSString alloc] initWithData:jsonData encoding:NSUTF8StringEncoding];
     
     NSString *embedHTML = [NSString stringWithFormat:embedHTMLTemplate, playerVarsJsonString];
+    
     [self.webView loadHTMLString:embedHTML baseURL: self.originURL];
     self.webView.navigationDelegate = self;
-    self.webView.UIDelegate = self;
     
     if ([self.delegate respondsToSelector:@selector(playerViewPreferredInitialLoadingView:)]) {
         UIView *initialLoadingView = [self.delegate playerViewPreferredInitialLoadingView:self];
@@ -1098,31 +1069,14 @@ NSString static *const kWKYTPlayerSyndicationRegexPattern = @"^https://tpc.googl
     _webView = webView;
 }
 
-- (WKWebView *)createNewWebViewWithPlayerParams:(NSDictionary *)additionalPlayerParams {
-
-    NSMutableDictionary *playerVars = [additionalPlayerParams objectForKey:@"playerVars"];
-    NSNumber* playsinline = [playerVars objectForKey:@"playsinline"] ? [playerVars objectForKey:@"playsinline"] : @0;
-    // WKWebView equivalent for UI Web View's scalesPageToFit
-    // 
-    NSString *jScript = @"var meta = document.createElement('meta'); meta.setAttribute('name', 'viewport'); meta.setAttribute('content', 'width=device-width'); document.getElementsByTagName('head')[0].appendChild(meta);";
-    
-    WKUserScript *wkUScript = [[WKUserScript alloc] initWithSource:jScript injectionTime:WKUserScriptInjectionTimeAtDocumentEnd forMainFrameOnly:YES];
-    WKUserContentController *wkUController = [[WKUserContentController alloc] init];
-    [wkUController addUserScript:wkUScript];
-    
-    WKWebViewConfiguration *configuration = [WKWebViewConfiguration new];
-    
-    configuration.userContentController = wkUController;
-    
-    configuration.allowsInlineMediaPlayback = YES;
-    if ( [(NSString*)[UIDevice currentDevice].model hasPrefix:@"iPad"] && [playsinline isEqualToNumber:@0]) {
-        configuration.allowsInlineMediaPlayback = NO; /* Device is iPad */
-    }
-
-    configuration.mediaTypesRequiringUserActionForPlayback = NO;
-    configuration.allowsPictureInPictureMediaPlayback = YES;
-
-    WKWebView *webView = [[WKWebView alloc] initWithFrame:self.bounds configuration:configuration];
+- (WKWebView *)createNewWebView {
+    WKWebViewConfiguration *webViewConfiguration = [[WKWebViewConfiguration alloc] init];
+    webViewConfiguration.allowsInlineMediaPlayback = YES;
+    webViewConfiguration.mediaTypesRequiringUserActionForPlayback = WKAudiovisualMediaTypeNone;
+    webViewConfiguration.allowsPictureInPictureMediaPlayback = YES;
+    WKWebView *webView = [[WKWebView alloc] initWithFrame:self.bounds
+                                                                        configuration:webViewConfiguration];
+    webView.autoresizingMask = (UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight);
     webView.scrollView.scrollEnabled = NO;
     webView.scrollView.bounces = NO;
     
@@ -1132,10 +1086,8 @@ NSString static *const kWKYTPlayerSyndicationRegexPattern = @"^https://tpc.googl
             webView.opaque = NO;
         }
     }
-    
     return webView;
 }
-
 - (void)removeWebView {
     [self.webView removeFromSuperview];
     self.webView = nil;

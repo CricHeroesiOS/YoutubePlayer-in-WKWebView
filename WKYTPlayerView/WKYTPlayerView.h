@@ -752,7 +752,7 @@ typedef void (^WKYTPlaybackQualityCompletionHandler)(WKYTPlaybackQuality result,
 #pragma mark - Safe Area
 
 - (void)mutableSafeArea: (UIEdgeInsets)inset;
-
+/*
 #pragma mark - Captions
 
 - (void)captionTracks:(_Nullable WKYTArrayCompletionHandler)completionHandler;
@@ -760,7 +760,7 @@ typedef void (^WKYTPlaybackQualityCompletionHandler)(WKYTPlaybackQuality result,
 - (void)captions:(BOOL)isTurnOn language:(NSString * _Nonnull)language completion:(nullable void (^)(id _Nullable result, NSError * _Nullable error))completionHandler;
 - (void)captionSize:(NSInteger)size completion:(_Nullable WKYTStringCompletionHandler)completionHandler;
 
-
+*/
 #pragma mark - Ad
 
 - (void)clearAdvertise;
