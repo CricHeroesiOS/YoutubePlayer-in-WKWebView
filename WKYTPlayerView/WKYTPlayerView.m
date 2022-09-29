@@ -52,6 +52,7 @@ NSString static *const kWKYTPlayerCallbackOnStateChange = @"onStateChange";
 NSString static *const kWKYTPlayerCallbackOnPlaybackQualityChange = @"onPlaybackQualityChange";
 NSString static *const kWKYTPlayerCallbackOnError = @"onError";
 NSString static *const kWKYTPlayerCallbackOnPlayTime = @"onPlayTime";
+NSString static *const kWKYTPlayerCallbackOnPictureInPictureChange = @"onPictureInPicrueState";
 
 NSString static *const kWKYTPlayerCallbackOnYouTubeIframeAPIReady = @"onYouTubeIframeAPIReady";
 NSString static *const kWKYTPlayerCallbackOnYouTubeIframeAPIFailedToLoad = @"onYouTubeIframeAPIFailedToLoad";
@@ -753,6 +754,10 @@ NSString static *const kWKYTPlayerSyndicationRegexPattern = @"^https://tpc.googl
             WKYTPlaybackQuality quality = [WKYTPlayerView playbackQualityForString:data];
             [self.delegate playerView:self didChangeToQuality:quality];
         }
+    }else if ([action isEqual:kWKYTPlayerCallbackOnPictureInPictureChange]) {
+        if ([self.delegate respondsToSelector:@selector(playerView:didChangeToStatePictureInPicture:)]) {
+            [self.delegate playerView:self didChangeToStatePictureInPicture: data];
+        }
     } else if ([action isEqual:kWKYTPlayerCallbackOnError]) {
         if ([self.delegate respondsToSelector:@selector(playerView:receivedError:)]) {
             WKYTPlayerError error = kWKYTPlayerErrorUnknown;
@@ -866,7 +871,8 @@ NSString static *const kWKYTPlayerSyndicationRegexPattern = @"^https://tpc.googl
                                       @"onReady" : @"onReady",
                                       @"onStateChange" : @"onStateChange",
                                       @"onPlaybackQualityChange" : @"onPlaybackQualityChange",
-                                      @"onError" : @"onPlayerError"
+                                      @"onError" : @"onPlayerError",
+                                      @"onPictureInPicrueState" : @"onPictureInPictureChange"
                                       };
     NSMutableDictionary *playerParams = [[NSMutableDictionary alloc] init];
     if (additionalPlayerParams) {
@@ -1114,7 +1120,8 @@ NSString static *const kWKYTPlayerSyndicationRegexPattern = @"^https://tpc.googl
     }
 
     configuration.mediaTypesRequiringUserActionForPlayback = NO;
-    
+    configuration.allowsPictureInPictureMediaPlayback = YES;
+
     WKWebView *webView = [[WKWebView alloc] initWithFrame:self.bounds configuration:configuration];
     webView.scrollView.scrollEnabled = NO;
     webView.scrollView.bounces = NO;
