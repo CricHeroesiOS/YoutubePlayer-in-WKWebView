@@ -706,12 +706,11 @@ NSString static *const kWKYTPlayerSyndicationRegexPattern = @"^https://tpc.googl
 /* Blocked a frame with origin "http://co.vlending.mubeat.dev" from accessing a frame with origin "https://www.youtube.com".  The frame requesting access has a protocol of "http", the frame being accessed has a protocol of "https". Protocols must match. */
 - (NSURL *)originURL {
     if (!_originURL) {
-        /*
         NSString *bundleId = [[NSBundle mainBundle] bundleIdentifier];
         NSString *stringURL = [[NSString stringWithFormat:@"http://%@", bundleId] lowercaseString];
         _originURL = [NSURL URLWithString:stringURL];
-         */
-        _originURL = [NSURL URLWithString:@"https://www.youtube.com"];
+         
+        //_originURL = [NSURL URLWithString:@"https://www.youtube.com"];
     }
     return _originURL;
 }
